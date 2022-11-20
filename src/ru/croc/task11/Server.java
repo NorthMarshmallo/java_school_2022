@@ -1,45 +1,43 @@
 package ru.croc.task11;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.Scanner;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.ArrayList;
+public class Server{
+    //у сервера будет свой сокет и лист клиентов
+    private static ServerSocket server = null;
+    private static Socket[] clientList;
 
-public class Server implements Runnable{
-    private static ServerSocketChannel server = null;
 
-    public static void main(String[] args) throws Exception{
-        String output;
-        int messageLength;
-        ByteBuffer buf = ByteBuffer.allocateDirect(1024);
-        server = ServerSocketChannel.open();
-        server.socket().bind(new InetSocketAddress (9000));
-        while (true) {
-            SocketChannel socket = server.accept();
-            System.out.println ("Incoming connection from: "
-                    + socket.socket().getRemoteSocketAddress( ));
-            buf.clear();
-            messageLength = socket.read(buf);
-            buf.rewind();
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < messageLength; i++) {
-                sb.append((char) buf.get());
+    public static void main(String[] args){
+        //для указанного порта открываем сервер
+        try {
+            server = new ServerSocket(9000);
+        } catch (Exception e){
+            System.out.println("Failed to create server");
+            closeServer();
+            return;
+        }
+        ArrayList<Socket> clientList = new ArrayList<>();
+        try {
+            while (!server.isClosed()) {
+                Socket socket = server.accept();
+                clientList.add(socket);
+                new EchoServerThread(socket, clientList).start();
             }
-            String[] message = sb.toString().split("\n");
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            output = LocalDateTime.now().format(formatter) + " [" + message[0] + "]: " + message[1];
-            System.out.println(output);
+        } catch (Exception e){
+            System.out.println("Failed to accept socket");
+            closeServer();
         }
     }
 
-    @Override
-    public void run() {
-        
+    public static void closeServer() {
+        try {
+            if (server != null) {
+                server.close();
+            }
+        } catch (Exception e){
+            System.out.println("Failed to close server");
+        }
     }
 }
