@@ -4,8 +4,7 @@ public class Movie {
     private final String id;
     private final String name;
     private Integer historyViews;
-    private Integer newUserViews;
-    private Integer recommendationCoefficient; /**будет складываться из коэффициентов схожести предпочтений пользователей,
+    private Integer recommendationCoefficient = 0; /**будет складываться из коэффициентов схожести предпочтений пользователей,
      которые данный фильм смотрели, с предпочтениями нового пользователя*/
     public Movie(String id, String name){
         this.id = id;
@@ -16,9 +15,6 @@ public class Movie {
     }
     public Integer getHistoryViews(){
         return this.historyViews;
-    }
-    public Integer getNewUserViews(){
-        return this.newUserViews;
     }
 
     public Integer getRc() {
@@ -31,16 +27,14 @@ public class Movie {
         }
         this.historyViews += addedNumber;
     }
-    public void updateNewUserViewsNumber(int addedNumber){
-        if (this.newUserViews == null) {
-            this.newUserViews = 0;
-        }
-        this.newUserViews += addedNumber;
-    }
     public void updateRecommendationCoefficient(int addedNumber){
-        if (this.recommendationCoefficient == null) {
-            this.recommendationCoefficient = 0;
-        }
         this.recommendationCoefficient += addedNumber;
     }
+    //метод после выдачи рекомендации для нового пользователя, чтобы подготовиться к следующему
+    public void setRcZero() {
+        //если у кового пользователя нет просмотров для этого фильма, то он мог быть рекомендован, значит надо обновить рекомендательный
+        //коэффициент
+        this.recommendationCoefficient = 0;
+    }
+
 }
