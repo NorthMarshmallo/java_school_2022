@@ -1,5 +1,7 @@
 package ru.croc.task13;
 
+import ru.croc.task13.pojo.ComparingResults;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.*;
@@ -8,6 +10,10 @@ public class ViewHistory {
     private static HashMap<String, Movie> serviceMovies = new HashMap<>();
     //ключи - идентификаторы фильмов, значения - объекты-фильмы
     private static Set<User> history = new HashSet<>();
+    //сет со всеми пользователями
+
+    //исключаем возможность создавать историю, предполагается, что она одна на сервер
+    private ViewHistory(){}
 
     public static HashMap<String, Movie> getMapOfServiceMovies() {
         return serviceMovies;
@@ -21,13 +27,9 @@ public class ViewHistory {
         }
     }
 
-    public static void updateRcById(String id, Integer similarityCoeff) {
-        serviceMovies.get(id).updateRecommendationCoefficient(similarityCoeff);
-    }
-
-    public static List<Object> compareViews(User newUser, User prevUser) {
-        Integer similarityCoeff;
-        Double threshouldCheck = 0.0;
+    public static ComparingResults compareViews(User newUser, User prevUser) {
+        int similarityCoeff;
+        double threshouldCheck = 0.0;
         //множество фильмов, которые пользователь из истории смотрел, а текущий нет
         Set<String> newUserNotViewed = new HashSet<>();
         similarityCoeff = 0;
@@ -48,11 +50,7 @@ public class ViewHistory {
                 newUserNotViewed.add(id);
             }
         }
-        List<Object> result = new ArrayList();
-        result.add(similarityCoeff);
-        result.add(newUserNotViewed);
-        result.add(threshouldCheck);
-        return result;
+        return new ComparingResults(similarityCoeff, newUserNotViewed, threshouldCheck);
     }
 
     public static void addListOfMovies(String fileName) {
@@ -85,27 +83,28 @@ public class ViewHistory {
 
     public static void getReadyForAnotherNewUser(User newUser) {
         ViewHistory.addUser(newUser);
-        for (String id : serviceMovies.keySet()) {
-            if (!newUser.getUserViewHistorySet().contains(id)){
-                serviceMovies.get(id).setRcZero();
-            }
-        }
     }
 
-    public static void processViewHistory(User newUser) {
-        Integer similarityCoeff;
-        int totalNumberOfNewUserViews = newUser.getUserViewHistory().size();
+    public static HashMap<String, Integer> processViewHistory(User newUser) {
+        HashMap<String, Integer> recommendCoeffMap = new HashMap<>();
+        //для выдачи рекомендательного коэффициента данного фильма для нового пользователя по ид
+        int similarityCoeff;
         for (User prevUser : history) {
-            List<Object> compareResults = ViewHistory.compareViews(newUser, prevUser);
-            similarityCoeff = (Integer) compareResults.get(0);
-            Set<String> newUserNotViewed = (HashSet<String>) compareResults.get(1);
-            if ((Double) compareResults.get(2) >= 0.5) {
+            ComparingResults compareResults = ViewHistory.compareViews(newUser, prevUser);
+            similarityCoeff = compareResults.getSimilarityCoeff();
+            Set<String> newUserNotViewed = compareResults.getNewUserNotViewed();
+            if (compareResults.getThreshouldCheck() >= 0.5) {
                 for (String id : newUserNotViewed) {
                     // чем больше пользователей с похожими предпочтениями посмотрели фильм тем больше
                     // в итоге будет для него рекомендательный коэффициент
-                    ViewHistory.updateRcById(id, similarityCoeff);
+                    Integer count = recommendCoeffMap.get(id);
+                    if (count == null)
+                        count = 0;
+                    count += similarityCoeff;
+                    recommendCoeffMap.put(id,count);
                 }
             }
         }
+        return recommendCoeffMap;
     }
 }
