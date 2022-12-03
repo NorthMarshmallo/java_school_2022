@@ -6,8 +6,10 @@ public class AgeSplitterModule {
 
     private static TreeMap<AgeRange, TreeSet<Respondent>> groups = new TreeMap<>(Comparator.comparingInt(AgeRange::getMinAge).reversed());
 
-    public static void main(String[] args) {
-        //String[] args = "18 25 35 45 60 80 100".split(" ");
+    public static void main(String[] args1) {
+        String[] args = "18 25 35 45 60 80 100".split(" ");
+        System.out.println("Модуль предоставит распределение списка респондентов по возрастным группам.");
+        System.out.println("Пожалуйста, введите список в формате строк <ФИО> <Возраст>. В конце списка должна быть строка END.");
         setGroups(args);
         Scanner in = new Scanner(System.in);
         String line, respondents;
