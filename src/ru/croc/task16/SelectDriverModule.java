@@ -46,7 +46,7 @@ public class SelectDriverModule {
             } else return (d2.getComfortClass().equals(comfortClass)) ? 1:-1;
         });
         storeSortedDatabase("src\\\\ru\\\\croc\\\\task16\\\\SortedDatabase.txt",driverSelectionList);
-        return driverSelectionList.get(1).getId();
+        return driverSelectionList.get(0).getId();
     }
 
     private static void getDriversBase(String fileName){
@@ -78,7 +78,6 @@ public class SelectDriverModule {
                 String comfortClass = driver.getComfortClass();
                 HashSet<String> facilityList = driver.getFacilities();
                 String id = driver.getId();
-                driversDatabase.add(new Driver(id, coordinates, comfortClass, facilityList));
                 bw.write(id + ";" + coordinates + ";" + comfortClass + ";" + facilityList);
                 bw.write("\n");
             }
