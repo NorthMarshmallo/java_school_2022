@@ -20,7 +20,7 @@ public class SocialService{
 
     public static void main(String[] args) {
         //сервис создает новый фильтр с нужным ему условием фильтрации
-        BlackListFilter<String> blf = new BlackListFilter<>(filterCondition);
+        ServiceBlackListFilter<String> blf = new ServiceBlackListFilter<>(filterCondition);
         //фильтр уже вызовет дефолтный метод для очистки комментариев и передаст ему сервисный предикат
         List<String> filtredComments = blf.filterComments(comments);
         System.out.println(filtredComments.toString());
