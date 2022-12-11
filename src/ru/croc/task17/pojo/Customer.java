@@ -24,16 +24,18 @@ public class Customer {
         return name;
     }
 
-    public int getSpent() {
-        //считается здесь, чтобы не контролировать при каждом добавлении продукта в заказ
+    public void updateSpent(){
+
         this.spent = orders.stream().mapToInt(Order::getCost).sum();
+
+    }
+    public int getSpent() {
+
         return spent;
     }
 
     @Override
-    public String toString() { getSpent();
-
-        return "'" + name + "'," + spent;
+    public String toString() { return "'" + name + "'," + spent;
     }
 
 }

@@ -23,6 +23,22 @@ public class Product {
         return price;
     }
 
+    public String getTitle() {
+        return title;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setPrice(Integer price) {
+        this.price = price;
+    }
+
     public void setId(int id) {
         this.id = id;
     }

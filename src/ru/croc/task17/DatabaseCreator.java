@@ -5,7 +5,9 @@ import ru.croc.task17.pojo.Order;
 import ru.croc.task17.pojo.Product;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
@@ -13,13 +15,13 @@ import java.util.Map;
 public class DatabaseCreator {
 
     //продукты по артикулам
-    private Map<String, Product> products;
+    protected Map<String, Product> products;
     //заказчики по ид
-    private Map<String,Customer> customers;
+    protected Map<String,Customer> customers;
     //заказы по номеру
     private Map<Integer,Order> orders;
 
-    private String fileName, dbAdress;
+    protected String fileName, dbAdress;
 
     public DatabaseCreator(){
 
@@ -42,6 +44,7 @@ public class DatabaseCreator {
         setFileName(fileName);
         setDbAdress(dbAdress);
         getInfoForTables();
+        setAllMoney();
 
         //если обращаются по старому адресу с просьбой СОЗДАТЬ базу данных, скорее всего хотят ее переписать
         //поэтому для начала удалим старые данные
@@ -101,6 +104,15 @@ public class DatabaseCreator {
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(0);
+        }
+    }
+
+    private void setAllMoney(){
+        for (Order order: orders.values()){
+            order.updateCost();
+        }
+        for (Customer customer: customers.values()){
+            customer.updateSpent();
         }
     }
 
@@ -203,6 +215,36 @@ public class DatabaseCreator {
                     }
                     System.out.println();
                     
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    public void printTables(Iterable<String> tables, String file){
+
+        try(BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+            Connection connection = DriverManager.getConnection(dbAdress, "sa","")){
+
+            for (String tableName: tables) {
+
+                bw.write(tableName);
+                bw.newLine();
+                String sql = "select * from " + tableName;
+                PreparedStatement statement = connection.prepareStatement(sql);
+                ResultSet rs = statement.executeQuery();
+                ResultSetMetaData rsmd = rs.getMetaData();
+                int columnsNumber = rsmd.getColumnCount();
+
+                while (rs.next()) {
+
+                    for(int i = 1 ; i <= columnsNumber; i++){
+                        bw.write(rs.getString(i) + " ");
+                    }
+                    bw.newLine();
+
                 }
             }
         } catch (Exception e) {
