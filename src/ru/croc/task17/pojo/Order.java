@@ -7,12 +7,13 @@ public class Order {
 
     private final Integer orderNum;
     private List<Product> products;
+    private int cost;
 
-    private final String customerName;
+    private final Customer customer;
 
-    public Order(Integer orderNum,String customerName,Product product){
+    public Order(Integer orderNum,Customer customer,Product product){
 
-        this.customerName = customerName;
+        this.customer = customer;
         this.orderNum = orderNum;
         this.products = new ArrayList<>();
 
@@ -31,6 +32,11 @@ public class Order {
     }
 
     public String getCustomerName() {
-        return customerName;
+        return customer.getName();
+    }
+
+    public int getCost(){
+        this.cost = products.stream().mapToInt(Product::getPrice).sum();
+        return cost;
     }
 }

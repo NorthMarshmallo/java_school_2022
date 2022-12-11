@@ -1,13 +1,13 @@
 package ru.croc.task17;
 
-import ru.croc.task17.pojo.*;
+import ru.croc.task17.pojo.Customer;
+import ru.croc.task17.pojo.Order;
+import ru.croc.task17.pojo.Product;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.sql.*;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class DatabaseCreator {
@@ -86,13 +86,14 @@ public class DatabaseCreator {
                 Product product = new Product(art,title,price);
                 products.putIfAbsent(art, product);
 
-                if (customers.get(name) == null)
-                    customers.put(name, new Customer(name, price));
-                else
-                    customers.get(name).updateSpent(price);
+                Customer customer = new Customer(name);
+                customers.putIfAbsent(name, customer);
 
-                if (orders.get(orderNum) == null)
-                    orders.put(orderNum, new Order(orderNum,name,product));
+                if (orders.get(orderNum) == null) {
+                    Order order = new Order(orderNum, customer, product);
+                    orders.put(orderNum, order);
+                    customer.updateOrders(order);
+                }
                 else
                     orders.get(orderNum).updateProducts(product);
 
@@ -108,7 +109,8 @@ public class DatabaseCreator {
         try (Statement statement = connection.createStatement()) {
 
             String createProductTable = "CREATE TABLE PRODUCT " +
-                    "(art VARCHAR(255) PRIMARY KEY NOT NULL, " +
+                    "(id INTEGER NOT NULL AUTO_INCREMENT, " +
+                    "art VARCHAR(255) PRIMARY KEY NOT NULL, " +
                     "title VARCHAR(255), " +
                     "price INTEGER NOT NULL)";
             //в целом название показывается только в данной таблице и ни с чем не связано, поэтому потенциально
@@ -116,7 +118,7 @@ public class DatabaseCreator {
 
             statement.execute(createProductTable);
             for (String art : products.keySet()) {
-                statement.executeUpdate("INSERT INTO PRODUCT VALUES ('" + art + "', " + products.get(art) + ")");
+                statement.executeUpdate("INSERT INTO PRODUCT (art,title,price) VALUES (" + products.get(art) + ")");
             }
         } catch (Exception e){
             e.printStackTrace();
@@ -137,7 +139,9 @@ public class DatabaseCreator {
             for (String id : customers.keySet()) {
                 statement.executeUpdate("INSERT INTO CUSTOMER VALUES (" + customers.get(id) + ")");
             }
-        } catch (Exception e){
+
+        }
+        catch (Exception e){
             e.printStackTrace();
         }
 
@@ -148,25 +152,29 @@ public class DatabaseCreator {
         try (Statement statement = connection.createStatement()) {
 
             String createOrderTable = "CREATE TABLE ORDERS " +
-                    "(orderNum INT PRIMARY KEY NOT NULL, " +
-                    "customerName VARCHAR(255) NOT NULL, "+
+                    "(strInOrders INT NOT NULL AUTO_INCREMENT, " +
+                    "orderNum INT PRIMARY KEY NOT NULL, " +
+                    "customerName VARCHAR(255) NOT NULL," +
+                    "orderCost INT NOT NULL, "+
                     "FOREIGN KEY (customerName) REFERENCES CUSTOMER(name))";
 
             String createOrdersProductsTable = "CREATE TABLE ORDERSPRODUCTS " +
-                    "(orderNum INT NOT NULL, " +
+                    "(strInOP INT PRIMARY KEY NOT NULL AUTO_INCREMENT, " +
+                    "orderNum INT NOT NULL, " +
                     "art VARCHAR(255) NOT NULL, " +
                     "FOREIGN KEY (orderNum) REFERENCES ORDERS(orderNum), " +
-                    "FOREIGN KEY (art) REFERENCES PRODUCT(art))";
+                    "FOREIGN KEY (art) REFERENCES PRODUCT(art) " +
+                    "ON DELETE CASCADE)";
 
             statement.execute(createOrderTable);
             statement.execute(createOrdersProductsTable);
 
             for (Integer orderNum : orders.keySet()) {
                 Order order = orders.get(orderNum);
-                statement.executeUpdate("INSERT INTO ORDERS VALUES (" + orderNum +
-                        ", '" + order.getCustomerName() + "')");
+                statement.executeUpdate("INSERT INTO ORDERS (orderNum,customerName,orderCost) VALUES (" + orderNum +
+                        ", '" + order.getCustomerName() + "', " + order.getCost() + ")");
                 for (Product product: order.getProducts())
-                    statement.executeUpdate("INSERT INTO ORDERSPRODUCTS VALUES (" + orderNum +
+                    statement.executeUpdate("INSERT INTO ORDERSPRODUCTS (orderNum,art) VALUES (" + orderNum +
                             ", '" + product.getArt() + "')");
             }
         } catch (Exception e){
@@ -175,13 +183,12 @@ public class DatabaseCreator {
 
     }
 
-    public void printTables(){
-
-        List<String> tables = Arrays.asList("CUSTOMER","PRODUCT","ORDERS","ORDERSPRODUCTS");
+    public void printTables(Iterable<String> tables){
 
         try(Connection connection = DriverManager.getConnection(dbAdress, "sa","")){
 
             for (String tableName: tables) {
+
                 System.out.println(tableName);
                 String sql = "select * from " + tableName;
                 PreparedStatement statement = connection.prepareStatement(sql);
@@ -204,4 +211,15 @@ public class DatabaseCreator {
 
     }
 
+    public Map<Integer, Order> getOrders() {
+        return new HashMap<>(orders);
+    }
+
+    public Map<String, Customer> getCustomers() {
+        return new HashMap<>(customers);
+    }
+
+    public Map<String, Product> getProducts() {
+        return new HashMap<>(products);
+    }
 }
