@@ -27,6 +27,7 @@ public class WebStoreDao implements WebStoreDaoImpl {
         this.products = dbc.getProducts();
         this.customers = dbc.getCustomers();
         this.orders = dbc.getOrders();
+        orders.values().forEach(order -> getOrdersDbInfo(order));
 
     }
 
@@ -79,10 +80,20 @@ public class WebStoreDao implements WebStoreDaoImpl {
         Product updatedProduct = null;
         try (Statement statement = connection.createStatement()) {
 
-            String sql = "UPDATE PRODUCT SET (art,title,price) = (" + product + ") WHERE art = '" + product.getArt() + "'";
+            String art = product.getArt();
+            String sql = "UPDATE PRODUCT SET (art,title,price) = (" + product + ") WHERE art = '" + art + "'";
             statement.executeUpdate(sql);
-            updatedProduct = findProduct(product.getArt());
+            updatedProduct = findProduct(art);
 
+            /*в сохраненной базе также нужно обновить данные о продукте,
+            но возвращать его так, чтобы пользователь мог изменить не хотим,
+            поэтому возвращаем полученный выше объект, обновляем отдельно*/
+            if (updatedProduct != null) {
+                Product productInBase = products.get(art);
+                productInBase.setPrice(updatedProduct.getPrice());
+                productInBase.setTitle(updatedProduct.getTitle());
+                productInBase.setId(updatedProduct.getId());
+            }
         }
         catch (Exception e){
             e.printStackTrace();
@@ -94,13 +105,29 @@ public class WebStoreDao implements WebStoreDaoImpl {
     @Override
     public void deleteProduct(String productCode) {
 
+        products.remove(productCode);
         try (Statement statement = connection.createStatement()) {
 
-            String sql = "SELECT record.orderNum FROM ORDERSPRODUCTS record" +
+            String sql = "SELECT * FROM ORDERSPRODUCTS record" +
                     " WHERE record.art = '" + productCode + "'";
 
+            /* P.s.: упоминания о заказе удаляются, стоимость уже выданных заказов
+            и потраченная пользователем сумма остаются, тк деньги уже оплачены, а
+            удалить требуют только упоминания о товарах; аналогично при обновлении
+            информации о товаре ранее выданные заказы остаются с той же стоимостью */
+
+            Order orderToChange = null;
             ResultSet rs = statement.executeQuery(sql);
-            Set<Integer> ordersToChange = new HashSet<>(Arrays.as(rs.getArray("orderNum")));
+            while (rs.next()){
+                int orderNum = rs.getInt("orderNum");
+                orderToChange = orders.get(orderNum);
+                List<Product> products = orderToChange.getProducts();
+                products.remove(productCode);
+                orderToChange.getStrsInOP().remove(Integer.valueOf(rs.getInt("strInOP")));
+                if (products.isEmpty())
+                    orders.remove(orderNum);
+            }
+
 
             /* удалит запись из таблицы продуктов, из таблицы связи продуктов с заказами
             все удалится благодаря on delete cascade, заданном при создании;
@@ -121,6 +148,53 @@ public class WebStoreDao implements WebStoreDaoImpl {
 
     @Override
     public Order createOrder(String userLogin, List<Product> products) {
-        return null;
+
+        Order createdOrder = null;
+        try (Statement statement = connection.createStatement()) {
+
+            int orderNum = Collections.max(orders.keySet()) + 1;
+            Customer customer = customers.get(userLogin);
+            createdOrder = new Order(orderNum,customer,products);
+            createdOrder.updateCost();
+            customer.updateSpent();
+            orders.put(orderNum,createdOrder);
+            statement.executeUpdate("INSERT INTO ORDERS (orderNum,customerName,orderCost) VALUES " +
+                    "(" + orderNum + ",'" + userLogin  + "'," + createdOrder.getCost() + ");" +
+                    "UPDATE CUSTOMER SET spent = " + customer.getSpent() + " WHERE name = '" + userLogin + "'");
+            for (Product product: products)
+                statement.executeUpdate("INSERT INTO ORDERSPRODUCTS (orderNum,art) VALUES (" + orderNum + ",'" +
+                        product.getArt() + "')");
+
+            getOrdersDbInfo(createdOrder);
+
+        } catch (NullPointerException ne){
+            throw ne;
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        return createdOrder;
+
+    }
+
+    private void getOrdersDbInfo(Order order){
+        try (Statement statement = connection.createStatement()) {
+            ResultSet rs = statement.executeQuery("SELECT o.strInOrders FROM ORDERS o" +
+                    " WHERE o.orderNum = " + order.getOrderNum());
+            if (rs.next())
+                order.setStrInOrders(rs.getInt("strInOrders"));
+            rs = statement.executeQuery("SELECT op.strInOP FROM ORDERSPRODUCTS op" +
+                    " WHERE op.orderNum = " + order.getOrderNum());
+            List<Integer> strList = new ArrayList<>();
+            while (rs.next())
+                strList.add(rs.getInt("strInOP"));
+            order.setStrsInOp(strList);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public Map<String, Product> getProducts() {
+        return new HashMap<>(products);
     }
 }
