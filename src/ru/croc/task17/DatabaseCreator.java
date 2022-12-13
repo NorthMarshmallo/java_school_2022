@@ -4,22 +4,22 @@ import ru.croc.task17.pojo.Customer;
 import ru.croc.task17.pojo.Order;
 import ru.croc.task17.pojo.Product;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.*;
 import java.sql.*;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class DatabaseCreator {
 
     //продукты по артикулам
     protected Map<String, Product> products;
-    //заказчики по ид
+
+    //в поданном csv у пользователей ид нет, здесь для удобства создания базы ключи - имена, в дальнейших задачах
+    //будет мапа с ключами - ид
     protected Map<String,Customer> customers;
     //заказы по номеру
-    private Map<Integer,Order> orders;
+    protected Map<Integer,Order> orders;
 
     protected String fileName, dbAdress;
 
@@ -80,6 +80,7 @@ public class DatabaseCreator {
     private void getInfoForTables(){
         try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
             String line;
+            int id = 1;
             while ((line = br.readLine()) != null) {
 
                 String[] pl = line.split(","); //pl for parsedLine
@@ -89,13 +90,17 @@ public class DatabaseCreator {
                 Product product = new Product(art,title,price);
                 products.putIfAbsent(art, product);
 
-                Customer customer = new Customer(name);
-                customers.putIfAbsent(name, customer);
+
+                Customer customer = new Customer(id,name);
+                if (customers.get(name) == null) {
+                    customers.put(name, customer);
+                    id++;
+                }
 
                 if (orders.get(orderNum) == null) {
-                    Order order = new Order(orderNum, customer, product);
+                    Order order = new Order(orderNum, customers.get(name), product);
                     orders.put(orderNum, order);
-                    customer.updateOrders(order);
+                    customers.get(name).updateOrders(order);
                 }
                 else
                     orders.get(orderNum).updateProducts(product);
@@ -120,15 +125,14 @@ public class DatabaseCreator {
 
         try (Statement statement = connection.createStatement()) {
 
-            String createProductTable = "CREATE TABLE PRODUCT " +
-                    "(id INTEGER NOT NULL AUTO_INCREMENT, " +
-                    "art VARCHAR(255) PRIMARY KEY NOT NULL, " +
-                    "title VARCHAR(255), " +
-                    "price INTEGER NOT NULL)";
             //в целом название показывается только в данной таблице и ни с чем не связано, поэтому потенциально
             //может быть null
 
-            statement.execute(createProductTable);
+            statement.execute("CREATE TABLE PRODUCT " +
+                    "(id INTEGER NOT NULL AUTO_INCREMENT, " +
+                    "art VARCHAR(255) PRIMARY KEY NOT NULL, " +
+                    "title VARCHAR(255), " +
+                    "price INTEGER NOT NULL)");
             for (String art : products.keySet()) {
                 statement.executeUpdate("INSERT INTO PRODUCT (art,title,price) VALUES (" + products.get(art) + ")");
             }
@@ -142,14 +146,13 @@ public class DatabaseCreator {
 
         try (Statement statement = connection.createStatement()) {
 
-            String createCustomerTable = "CREATE TABLE CUSTOMER " +
-                    "(name VARCHAR(255) PRIMARY KEY NOT NULL , " +
-                    "spent INTEGER NOT NULL)";
+            statement.execute("CREATE TABLE CUSTOMER " +
+                    "(id INTEGER PRIMARY KEY NOT NULL," +
+                    "name VARCHAR(255) UNIQUE NOT NULL , " +
+                    "spent INTEGER NOT NULL)");
 
-            statement.execute(createCustomerTable);
-
-            for (String id : customers.keySet()) {
-                statement.executeUpdate("INSERT INTO CUSTOMER VALUES (" + customers.get(id) + ")");
+            for (String name : customers.keySet()) {
+                statement.executeUpdate("INSERT INTO CUSTOMER VALUES (" + customers.get(name) + ")");
             }
 
         }
@@ -163,28 +166,28 @@ public class DatabaseCreator {
 
         try (Statement statement = connection.createStatement()) {
 
-            String createOrderTable = "CREATE TABLE ORDERS " +
+            statement.execute("CREATE TABLE ORDERS " +
                     "(strInOrders INT NOT NULL AUTO_INCREMENT, " +
                     "orderNum INT PRIMARY KEY NOT NULL, " +
+                    "customerId INTEGER NOT NULL," +
                     "customerName VARCHAR(255) NOT NULL," +
                     "orderCost INT NOT NULL, "+
-                    "FOREIGN KEY (customerName) REFERENCES CUSTOMER(name))";
+                    "FOREIGN KEY (customerId) REFERENCES CUSTOMER(id)," +
+                    "FOREIGN KEY (customerName) REFERENCES CUSTOMER(name))");
 
-            String createOrdersProductsTable = "CREATE TABLE ORDERSPRODUCTS " +
+            statement.execute("CREATE TABLE ORDERSPRODUCTS " +
                     "(strInOP INT PRIMARY KEY NOT NULL AUTO_INCREMENT, " +
                     "orderNum INT NOT NULL, " +
                     "art VARCHAR(255) NOT NULL, " +
                     "FOREIGN KEY (orderNum) REFERENCES ORDERS(orderNum), " +
                     "FOREIGN KEY (art) REFERENCES PRODUCT(art) " +
-                    "ON DELETE CASCADE)";
-
-            statement.execute(createOrderTable);
-            statement.execute(createOrdersProductsTable);
+                    "ON DELETE CASCADE)");
 
             for (Integer orderNum : orders.keySet()) {
                 Order order = orders.get(orderNum);
-                statement.executeUpdate("INSERT INTO ORDERS (orderNum,customerName,orderCost) VALUES (" + orderNum +
-                        ", '" + order.getCustomerName() + "', " + order.getCost() + ")");
+                statement.executeUpdate("INSERT INTO ORDERS (orderNum,customerName,customerId,orderCost) " +
+                        "VALUES (" + orderNum + ", '" + order.getCustomerName() +
+                        "', " + order.getCustomerId() + ", " + order.getCost() + ")");
                 for (Product product: order.getProducts())
                     statement.executeUpdate("INSERT INTO ORDERSPRODUCTS (orderNum,art) VALUES (" + orderNum +
                             ", '" + product.getArt() + "')");
@@ -202,20 +205,25 @@ public class DatabaseCreator {
             for (String tableName: tables) {
 
                 System.out.println(tableName);
-                String sql = "select * from " + tableName;
-                PreparedStatement statement = connection.prepareStatement(sql);
+                PreparedStatement statement = connection.prepareStatement("select * from " + tableName);
                 ResultSet rs = statement.executeQuery();
                 ResultSetMetaData rsmd = rs.getMetaData();
                 int columnsNumber = rsmd.getColumnCount();
 
+                for(int i = 1 ; i <= columnsNumber; i++){
+                    System.out.print(rsmd.getColumnName(i) + " ");
+                }
+                System.out.println();
+
                 while (rs.next()) {
 
                     for(int i = 1 ; i <= columnsNumber; i++){
-                        System.out.print(rs.getString(i) + " "); 
+                        System.out.print(rs.getString(i) + " ");
                     }
                     System.out.println();
-                    
+
                 }
+                statement.close();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -223,34 +231,46 @@ public class DatabaseCreator {
 
     }
 
-    public void printTables(Iterable<String> tables, String file){
+    public void printTables(Iterable<String> tables, String file) {
 
-        try(BufferedWriter bw = new BufferedWriter(new FileWriter(file));
-            Connection connection = DriverManager.getConnection(dbAdress, "sa","")){
+        try {
+            File f = new File(file);
+            f.getParentFile().mkdirs();
+            f.createNewFile();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-            for (String tableName: tables) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+             Connection connection = DriverManager.getConnection(dbAdress, "sa", "")) {
+
+            for (String tableName : tables) {
 
                 bw.write(tableName);
                 bw.newLine();
-                String sql = "select * from " + tableName;
-                PreparedStatement statement = connection.prepareStatement(sql);
+                PreparedStatement statement = connection.prepareStatement("select * from " + tableName);
                 ResultSet rs = statement.executeQuery();
                 ResultSetMetaData rsmd = rs.getMetaData();
                 int columnsNumber = rsmd.getColumnCount();
 
+                for (int i = 1; i <= columnsNumber; i++) {
+                    bw.write(rsmd.getColumnName(i) + " ");
+                }
+                bw.newLine();
+
                 while (rs.next()) {
 
-                    for(int i = 1 ; i <= columnsNumber; i++){
+                    for (int i = 1; i <= columnsNumber; i++) {
                         bw.write(rs.getString(i) + " ");
                     }
                     bw.newLine();
 
                 }
+                statement.close();
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
     public Map<Integer, Order> getOrders() {

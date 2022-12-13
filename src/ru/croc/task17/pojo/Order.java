@@ -43,6 +43,10 @@ public class Order {
         return customer;
     }
 
+    public Integer getCustomerId() {
+        return customer.getId();
+    }
+
     public String getCustomerName() {
         return customer.getName();
     }

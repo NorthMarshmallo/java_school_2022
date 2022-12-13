@@ -6,11 +6,13 @@ import java.util.List;
 public class Customer {
     private final String name;
     private List<Order> orders;
+    private Integer id;
     private int spent;
 
-    public Customer(String name){
+    public Customer(Integer id, String name){
 
         this.name = name;
+        this.id = id;
         this.orders = new ArrayList<>();
 
     }
@@ -20,7 +22,11 @@ public class Customer {
         this.orders.add(order);
 
     }
-    public String getName(){
+    public Integer getId(){
+        return id;
+    }
+
+    public String getName() {
         return name;
     }
 
@@ -35,7 +41,10 @@ public class Customer {
     }
 
     @Override
-    public String toString() { return "'" + name + "'," + spent;
+    public String toString() { return  id + ",'" + name + "'," + spent;
     }
 
+    public List<Order> getOrders() {
+        return new ArrayList<>(orders);
+    }
 }
