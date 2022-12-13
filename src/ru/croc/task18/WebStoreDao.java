@@ -7,19 +7,20 @@ import ru.croc.task17.pojo.Order;
 import ru.croc.task17.pojo.Product;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.*;
 
 public class WebStoreDao implements WebStoreDaoImpl {
 
-    private Connection connection;
+    protected Connection connection;
     //продукты по артикулам
-    private Map<String, Product> products;
+    protected Map<String, Product> products;
     //заказчики по ид
-    private Map<String, Customer> customers;
+    protected Map<String, Customer> customers;
     //заказы по номеру
-    private Map<Integer,Order> orders;
+    protected Map<Integer,Order> orders;
 
     public WebStoreDao(Connection connection, DatabaseCreator dbc){
 
@@ -34,11 +35,11 @@ public class WebStoreDao implements WebStoreDaoImpl {
     @Override
     public Product findProduct(String productCode) {
 
-        try (Statement statement = connection.createStatement()) {
+        try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM PRODUCT p " +
+                "WHERE p.art = ?")) {
 
-            String sql = "SELECT * FROM PRODUCT p " +
-                    "WHERE p.art = '" + productCode + "'";
-            ResultSet rs = statement.executeQuery(sql);
+            statement.setString(1,productCode);
+            ResultSet rs = statement.executeQuery();
             if (rs.next()) {
                 Product foundProduct = new Product(rs.getString("art"), rs.getString("title"),
                         rs.getInt("price"));
@@ -59,8 +60,7 @@ public class WebStoreDao implements WebStoreDaoImpl {
         Product createdProduct = null;
         try (Statement statement = connection.createStatement()) {
 
-            String sql = "INSERT INTO PRODUCT (art,title,price) VALUES (" + product + ")";
-            statement.executeUpdate(sql);
+            statement.executeUpdate("INSERT INTO PRODUCT (art,title,price) VALUES (" + product + ")");
             createdProduct = findProduct(product.getArt());
             this.products.put(product.getArt(),product);
 
@@ -78,11 +78,13 @@ public class WebStoreDao implements WebStoreDaoImpl {
     public Product updateProduct(Product product) {
 
         Product updatedProduct = null;
-        try (Statement statement = connection.createStatement()) {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "UPDATE PRODUCT SET (art,title,price) = (" + product + ") WHERE art = ?"
+        )) {
 
             String art = product.getArt();
-            String sql = "UPDATE PRODUCT SET (art,title,price) = (" + product + ") WHERE art = '" + art + "'";
-            statement.executeUpdate(sql);
+            statement.setString(1,art);
+            statement.executeUpdate();
             updatedProduct = findProduct(art);
 
             /*в сохраненной базе также нужно обновить данные о продукте,
@@ -108,16 +110,14 @@ public class WebStoreDao implements WebStoreDaoImpl {
         products.remove(productCode);
         try (Statement statement = connection.createStatement()) {
 
-            String sql = "SELECT * FROM ORDERSPRODUCTS record" +
-                    " WHERE record.art = '" + productCode + "'";
-
             /* P.s.: упоминания о заказе удаляются, стоимость уже выданных заказов
             и потраченная пользователем сумма остаются, тк деньги уже оплачены, а
             удалить требуют только упоминания о товарах; аналогично при обновлении
             информации о товаре ранее выданные заказы остаются с той же стоимостью */
 
             Order orderToChange = null;
-            ResultSet rs = statement.executeQuery(sql);
+            ResultSet rs = statement.executeQuery("SELECT * FROM ORDERSPRODUCTS record" +
+                    " WHERE record.art = '" + productCode + "'");
             while (rs.next()){
                 int orderNum = rs.getInt("orderNum");
                 orderToChange = orders.get(orderNum);
@@ -133,11 +133,11 @@ public class WebStoreDao implements WebStoreDaoImpl {
             все удалится благодаря on delete cascade, заданном при создании;
             в завершении удалит запись из таблицы заказов, если продуктов в
             заказе не останется после всех удалений */
-            sql = "DELETE FROM PRODUCT WHERE art = '" + productCode + "'; " +
+
+            statement.executeUpdate("DELETE FROM PRODUCT WHERE art = '" + productCode + "'; " +
                     "DELETE FROM ORDERS " +
                     "WHERE orderNum NOT IN " +
-                    "(SELECT record.orderNum FROM ORDERSPRODUCTS record)";
-            statement.executeUpdate(sql);
+                    "(SELECT record.orderNum FROM ORDERSPRODUCTS record)");
 
         }
         catch (Exception e){
@@ -158,8 +158,8 @@ public class WebStoreDao implements WebStoreDaoImpl {
             createdOrder.updateCost();
             customer.updateSpent();
             orders.put(orderNum,createdOrder);
-            statement.executeUpdate("INSERT INTO ORDERS (orderNum,customerName,orderCost) VALUES " +
-                    "(" + orderNum + ",'" + userLogin  + "'," + createdOrder.getCost() + ");" +
+            statement.executeUpdate("INSERT INTO ORDERS (orderNum,customerName,customerId,orderCost) VALUES " +
+                    "(" + orderNum + ",'" + userLogin  + "'," + customer.getId() + ", " + createdOrder.getCost() + ");" +
                     "UPDATE CUSTOMER SET spent = " + customer.getSpent() + " WHERE name = '" + userLogin + "'");
             for (Product product: products)
                 statement.executeUpdate("INSERT INTO ORDERSPRODUCTS (orderNum,art) VALUES (" + orderNum + ",'" +
