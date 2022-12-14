@@ -8,7 +8,7 @@ import java.util.List;
 
 public class WebStore19 {
 
-    private static WebStoreDaoTime wsDaoTime;
+    private static WebStoreDaoImplTime wsDaoTime;
     private static DatabaseTimeCreator dbtc;
 
     public static void main(String[] args){
@@ -22,7 +22,7 @@ public class WebStore19 {
 
         try(Connection connection = DriverManager.getConnection(url,"sa","")) {
 
-            wsDaoTime = new WebStoreDaoTime(connection, dbtc);
+            wsDaoTime = new WebStoreDaoImplTime(connection, dbtc);
             System.out.println("Результат поиска заказов для курьеров:");
             System.out.println();
             checkCourierOrders(1); //в базе

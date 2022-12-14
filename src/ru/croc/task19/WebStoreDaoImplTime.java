@@ -2,7 +2,7 @@ package ru.croc.task19;
 
 import ru.croc.task17.pojo.Customer;
 import ru.croc.task17.pojo.Order;
-import ru.croc.task18.WebStoreDao;
+import ru.croc.task18.WebStoreDaoImpl;
 import ru.croc.task19.pojo.Courier;
 import ru.croc.task19.pojo.OrderTime;
 
@@ -10,13 +10,13 @@ import java.sql.Connection;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class WebStoreDaoTime extends WebStoreDao {
+public class WebStoreDaoImplTime extends WebStoreDaoImpl {
 
     private Map<Integer, Courier> couriers;
     private Map<Integer, Customer> customersById;
     private Map<Integer, OrderTime> ordersTime;
 
-    public WebStoreDaoTime(Connection connection,DatabaseTimeCreator dbct){
+    public WebStoreDaoImplTime(Connection connection, DatabaseTimeCreator dbct){
         super(connection,dbct);
         this.couriers = dbct.getCouriersOutput();
         this.customersById = dbct.getCustomersOutput();
