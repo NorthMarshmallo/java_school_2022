@@ -23,11 +23,7 @@ public class SelectDriverModule {
     //можно передать заданную базу (формат как у рандомной предполагается для простоты)
     public SelectDriverModule(String fileName){
         this.baseFile = fileName;
-        try {
-            getDriversBase();
-        } catch (Exception e){
-            e.printStackTrace();
-        }
+        getDriversBase();
 
     }
 
@@ -66,7 +62,9 @@ public class SelectDriverModule {
             f.getParentFile().mkdirs();
             f.createNewFile();
         } catch (Exception e){
+            System.out.println("Файл для создания дефолтной базы не создается.");
             e.printStackTrace();
+            System.exit(0);
         }
 
         Random r = new Random();
@@ -83,6 +81,7 @@ public class SelectDriverModule {
                 bw.write("\n");
             }
         } catch (Exception e) {
+            System.out.println("Не получается задать дефолтную базу.");
             e.printStackTrace();
             System.exit(0);
         }
@@ -110,6 +109,7 @@ public class SelectDriverModule {
 
         } catch (Exception e) {
 
+            System.out.println("Что-то не так с базой.");
             e.printStackTrace();
             System.exit(0);
 
@@ -123,7 +123,9 @@ public class SelectDriverModule {
             f.getParentFile().mkdirs();
             f.createNewFile();
         } catch (Exception e){
+            System.out.println("Не получается создать файл для сохранения отсортированной базы.");
             e.printStackTrace();
+            System.exit(0);
         }
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(fileName))) {
             new FileWriter(fileName, false).close();
@@ -136,6 +138,7 @@ public class SelectDriverModule {
                 bw.write("\n");
             }
         } catch (Exception e) {
+            System.out.println("Не получается записать отсортированную базу.");
             e.printStackTrace();
             System.exit(0);
         }
