@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class WebStore18 {
 
-    private static WebStoreDao wsDao;
+    private static WebStoreDaoImpl wsDao;
     private static DatabaseCreator dbc;
 
     public static void main(String[] args){
@@ -25,7 +25,7 @@ public class WebStore18 {
         dbc.printTables(tables, "src\\ru\\croc\\task18\\txtTables\\CreatedTables.txt");
 
         try(Connection connection = DriverManager.getConnection(url,"sa","")) {
-            wsDao = new WebStoreDao(connection,dbc);
+            wsDao = new WebStoreDaoImpl(connection,dbc);
             System.out.println("Результат поиска продуктов:");
             checkFindProduct("T2");
             checkFindProduct("T8"); //нет артикула
