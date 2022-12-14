@@ -1,66 +1,84 @@
 package ru.croc.task16;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
+import ru.croc.task16.enums.ComfortClass;
+import ru.croc.task16.enums.Facility;
+import ru.croc.task16.exceptions.NotInBaseException;
+
+import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class SelectDriverModule {
 
-    private static HashSet<Driver> driversDatabase = new HashSet<>();
-    private static List<String> comfortClasses = Arrays.asList("Эконом", "Комфорт", "Ультра-Комфорт");
-    private static List<String> facilities = Arrays.asList("Детское кресло", "Новый автомобиль", "Водитель со стажем",
-            "Недорого для категории", "Подходит для людей с ограниченными возможностями");
+    private Set<Driver> driversDatabase = new HashSet<>();
+    private String baseFile = "src\\ru\\croc\\task16\\output\\DriversDatabase.txt";
 
-    public static void main(String[] args) {
-        getDriversBase("src\\\\ru\\\\croc\\\\task16\\\\DriversDatabase.txt");
-        Scanner in = new Scanner(System.in);
-        System.out.println("Модуль предоставит вам наиболее подходящего водителя.");
-        System.out.println("На вход ожидается получить три строки: координаты double(широта от 41 до 77, долгота от 19 до 169), " +
-                "желаемый класс комфорта и список особых пожеланий.");
-        String line;
-        while (!(line = in.nextLine()).equals("")){
-            try {
-                String driverId = selectDriver(new Coordinates(line.split(", ")),in.nextLine(),
-                        new HashSet<>(Arrays.asList(in.nextLine().split(", "))));
-                System.out.println("Вот идентификатор подходящего вам водителя: " + driverId);
-            } catch (Exception e) {
-                System.out.println("Условия ввода нарушены. Попробуйте еще раз");
-                e.printStackTrace();
-            }
+    //по дефолту возьмется созданная тестовая рандомная база
+    public SelectDriverModule(){
+        setRandomDriversBase();
+        getDriversBase();
+    }
+
+    //можно передать заданную базу (формат как у рандомной предполагается для простоты)
+    public SelectDriverModule(String fileName){
+        this.baseFile = fileName;
+        try {
+            getDriversBase();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
+    }
+
+    public String selectDriver(Coordinates coordinates, String comfortClassString, Set<String> requirementsStrings)
+    throws NotInBaseException{
+
+        try {
+            //организованные strTo методы кидают RuntimeException если не входит в набор значений
+            ComfortClass comfortClass = ComfortClass.strToComfortClass(comfortClassString);
+            Set<Facility> requirements = requirementsStrings.stream().map(Facility::strToFacility).collect(Collectors.toSet());
+            List<Driver> driverSelectionList = new ArrayList<>(driversDatabase);
+            driverSelectionList.sort((d1, d2) -> {
+                if ((d1.getComfortClass().equals(comfortClass)) == (d2.getComfortClass().equals(comfortClass))) {
+                    long numberStsfdReqD1 = requirements.stream().filter(d1.getFacilities()::contains).count();
+                    long numberStsfdReqD2 = requirements.stream().filter(d2.getFacilities()::contains).count();
+                    if (numberStsfdReqD1 == numberStsfdReqD2) {
+                        double d1Distance = Coordinates.compare(d1.getCoordinates(), coordinates);
+                        double d2Distance = Coordinates.compare(d2.getCoordinates(), coordinates);
+                        if (d1Distance == d2Distance) return 0;
+                        else return (d1Distance > d2Distance) ? 1 : -1;
+                    } else return (numberStsfdReqD1 < numberStsfdReqD2) ? 1 : -1;
+                } else return (d2.getComfortClass().equals(comfortClass)) ? 1 : -1;
+            });
+            storeSortedDatabase("src\\ru\\croc\\task16\\output\\SortedDatabase.txt", driverSelectionList);
+            return driverSelectionList.get(0).getId();
+        } catch (RuntimeException e){
+            System.out.println(e.getMessage());
+            throw new NotInBaseException();
         }
     }
 
-    public static String selectDriver(Coordinates coordinates, String comfortClass, HashSet<String> requirements){
-        List<Driver> driverSelectionList = new ArrayList<>(driversDatabase);
-        driverSelectionList.sort((d1,d2) -> {
-            if ((d1.getComfortClass().equals(comfortClass))==(d2.getComfortClass().equals(comfortClass))){
-                int numberStsfdReqD1 = Util.numberContained(requirements,d1.getFacilities());
-                int numberStsfdReqD2 = Util.numberContained(requirements,d2.getFacilities());
-                if (numberStsfdReqD1 == numberStsfdReqD2) {
-                    double d1Distance = Coordinates.compare(d1.getCoordinates(), coordinates);
-                    double d2Distance = Coordinates.compare(d2.getCoordinates(), coordinates);
-                    if (d1Distance == d2Distance) return 0;
-                    else return (d1Distance>d2Distance) ? 1:-1;
-                }
-                else return (numberStsfdReqD1 < numberStsfdReqD2) ? 1:-1;
-            } else return (d2.getComfortClass().equals(comfortClass)) ? 1:-1;
-        });
-        storeSortedDatabase("src\\\\ru\\\\croc\\\\task16\\\\SortedDatabase.txt",driverSelectionList);
-        return driverSelectionList.get(0).getId();
-    }
+    private void setRandomDriversBase(){
 
-    private static void getDriversBase(String fileName){
+        try {
+            File f = new File(baseFile);
+            f.getParentFile().mkdirs();
+            f.createNewFile();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
         Random r = new Random();
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(fileName))) {
-            new FileWriter(fileName, false).close();
-            for (int i=0; i<100; i++){
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(baseFile))) {
+            new FileWriter(baseFile, false).close();
+            for (int i=0; i<20; i++){
                 //крайние координаты для России учтены
                 Coordinates coordinates = new Coordinates(41 + r.nextDouble() * 36,19 + r.nextDouble() * 150);
-                String comfortClass = comfortClasses.get((int)(Math.random() * 3));
-                HashSet<String> facilityList = new HashSet<>(Util.pickNRandom(facilities, (int)(Math.random() * facilities.size())));
+                ComfortClass comfortClass = ComfortClass.randomClass();
+                HashSet<Facility> facilityList = new HashSet<>(Facility.pickRandomList());
                 //для удобства генерации id в виде id<num>
                 String id = "id" + i;
-                driversDatabase.add(new Driver(id, coordinates, comfortClass, facilityList));
                 bw.write(id + ";" + coordinates + ";" + comfortClass + ";" + facilityList);
                 bw.write("\n");
             }
@@ -70,13 +88,49 @@ public class SelectDriverModule {
         }
     }
 
-    private static void storeSortedDatabase(String fileName, List<Driver> driverList){
+    private void getDriversBase(){
+
+        try (BufferedReader br = new BufferedReader(new FileReader(baseFile))) {
+
+            String line;
+            Set<Facility> facilityList;
+            while ((line = br.readLine()) != null) {
+                String[] pl = line.split(";"); //pl for parsedLine
+                String id = pl[0];
+                Coordinates coordinates = new Coordinates(pl[1].split(","));
+                ComfortClass comfortClass = ComfortClass.valueOf(pl[2]);
+                if (!pl[3].equals("[]")) {
+                    facilityList = Stream.of(pl[3].replaceAll("[\\[\\]]", "").
+                            split(", ")).map(Facility::valueOf).collect(Collectors.toSet());
+                } else {
+                    facilityList = new HashSet<>();
+                }
+                driversDatabase.add(new Driver(id, coordinates, comfortClass, facilityList));
+            }
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+            System.exit(0);
+
+        }
+
+    }
+
+    private void storeSortedDatabase(String fileName, List<Driver> driverList){
+        try {
+            File f = new File(fileName);
+            f.getParentFile().mkdirs();
+            f.createNewFile();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(fileName))) {
             new FileWriter(fileName, false).close();
             for (Driver driver : driverList){
                 Coordinates coordinates = driver.getCoordinates();
-                String comfortClass = driver.getComfortClass();
-                HashSet<String> facilityList = driver.getFacilities();
+                ComfortClass comfortClass = driver.getComfortClass();
+                Set<Facility> facilityList = driver.getFacilities();
                 String id = driver.getId();
                 bw.write(id + ";" + coordinates + ";" + comfortClass + ";" + facilityList);
                 bw.write("\n");

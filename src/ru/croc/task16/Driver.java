@@ -1,15 +1,18 @@
 package ru.croc.task16;
 
-import java.util.HashSet;
+import ru.croc.task16.enums.ComfortClass;
+import ru.croc.task16.enums.Facility;
+
+import java.util.Set;
 
 public class Driver {
 
     private String id;
     private Coordinates coordinates;
-    private String comfortClass;
-    private HashSet<String> facilities;
+    private ComfortClass comfortClass;
+    private Set<Facility> facilities;
 
-    public Driver(String id, Coordinates coordinates, String comfortClass, HashSet<String> facilities){
+    public Driver(String id, Coordinates coordinates, ComfortClass comfortClass, Set<Facility> facilities){
         this.id = id;
         this.comfortClass = comfortClass;
         this.coordinates = coordinates;
@@ -20,11 +23,11 @@ public class Driver {
         return id;
     }
 
-    public HashSet<String> getFacilities() {
+    public Set<Facility> getFacilities() {
         return facilities;
     }
 
-    public String getComfortClass() {
+    public ComfortClass getComfortClass() {
         return comfortClass;
     }
 
