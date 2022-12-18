@@ -13,6 +13,9 @@ import java.sql.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+
+/* P.S. предполагается, что от двух разных клиентов один и тот же логин поступить не может (что проверка была
+* проведена при регистрации); корректная работы в случае подобного ввода при моделировании не подразумевается */
 //методы и поля protected на случай, если кто-то захочет переопределить
 public class AchievementsSenderThread implements Runnable{
 
@@ -145,6 +148,7 @@ public class AchievementsSenderThread implements Runnable{
             closeEverything();
 
         } catch (IOException | ClassNotFoundException ioe) {
+            System.out.println("Something wrong on client's side");
             ioe.printStackTrace();
             closeEverything();
         } catch (Exception e){

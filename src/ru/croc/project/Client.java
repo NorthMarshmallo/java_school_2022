@@ -41,7 +41,7 @@ public class Client {
     public static void main(String[] args){
 
         String input;
-        System.out.println("Welcome to the Learn It app! To model behavior of already" +
+        System.out.println("Welcome to the Learn It app achievements getting modeling programm! To model behavior of already" +
                 " registered client enter previous login, otherwise new one will be created: ");
         try (Scanner in = new Scanner(System.in)){
             input = in.nextLine();}
