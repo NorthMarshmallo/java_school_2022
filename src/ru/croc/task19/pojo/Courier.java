@@ -1,7 +1,5 @@
 package ru.croc.task19.pojo;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 public class Courier {
@@ -10,15 +8,25 @@ public class Courier {
     private String number;
     private String name;
     private String surname;
-    private List<OrderTime> orders;
 
-    public Courier(String number, String name, String surname) {
+    public Courier(String name, String surname, String number) {
 
         this.number = number;
         this.surname = surname;
         this.name = name;
-        this.orders = new ArrayList<>();
 
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getSurname() {
+        return surname;
+    }
+
+    public String getNumber() {
+        return number;
     }
 
     public Integer getId() {
@@ -27,14 +35,6 @@ public class Courier {
 
     public void setId(Integer id) {
         this.id = id;
-    }
-
-    public void addOrder(OrderTime order){
-        orders.add(order);
-    }
-
-    public List<OrderTime> getOrders() {
-        return orders;
     }
 
     @Override

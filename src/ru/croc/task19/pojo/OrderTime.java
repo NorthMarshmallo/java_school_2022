@@ -2,15 +2,15 @@ package ru.croc.task19.pojo;
 
 import ru.croc.task17.pojo.Order;
 
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
 
 public class OrderTime {
 
-    private LocalDateTime time;
+    private Timestamp time;
     private Courier courier;
     private Order order;
 
-    public OrderTime(Order order, LocalDateTime time, Courier courier){
+    public OrderTime(Order order, Timestamp time, Courier courier){
 
         this.order = order;
         this.time = time;
@@ -18,20 +18,8 @@ public class OrderTime {
 
     }
 
-    public LocalDateTime getTime() {
+    public Timestamp getTime() {
         return time;
-    }
-
-    public Integer getCourierId() {
-        return courier.getId();
-    }
-
-    public void setTime(String LocalDateTime) {
-        this.time = time;
-    }
-
-    public void setCourierId(Courier courier) {
-        this.courier = courier;
     }
 
     public Courier getCourier() {
